@@ -1,0 +1,3 @@
+repository "MA_wizard_delay@das_rosti@cloud"
+  path "/"
+    smartbranch "/main/exp_c/exp_b"
