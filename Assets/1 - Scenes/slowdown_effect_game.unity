@@ -5684,7 +5684,6 @@ MonoBehaviour:
   maxTrials: 60
   maxRounds: 16
   practiceTrials: 10
-  version: rld
   longDelay: 0.6
   shortDelay: 0
   stimulusTime: 0.4
@@ -5693,7 +5692,7 @@ MonoBehaviour:
   isWaitingPhase: 0
   isTrackingRunning: 0
   isRoundFinished: 0
-  trialOrder: []
+  delayOrder: 
   currentTrial: 1
   currentRound: 0
   currentMaxTrials: 0
@@ -5710,8 +5709,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   orb_middle: {fileID: 571457059}
-  orb_right: {fileID: 1730982293}
-  orb_left: {fileID: 1658741001}
+  targetPrefab: {fileID: 1655605525692014336, guid: b7e4694dc6f6601479d76cdd71a18ace, type: 3}
+  circleRadius: 2.5
+  normalColor: {r: 0, g: 0, b: 1, a: 1}
+  delayedColor: {r: 1, g: 0, b: 0, a: 1}
 --- !u!114 &1069446845
 MonoBehaviour:
   m_ObjectHideFlags: 0

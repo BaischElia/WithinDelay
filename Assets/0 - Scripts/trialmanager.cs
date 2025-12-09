@@ -7,7 +7,6 @@ public class trialmanager : MonoBehaviour
         public int maxTrials = 60;
         public int maxRounds = 8;
         public int practiceTrials = 10;
-        public string version = "lld";
         public float longDelay = 0.6f;
         public float shortDelay = 0f;
         public float stimulusTime = 0.4f;
@@ -18,18 +17,21 @@ public class trialmanager : MonoBehaviour
         public bool isWaitingPhase = false;
         public bool isTrackingRunning = false;
         public bool isRoundFinished = false;
-        public List<string> trialOrder;
+        public List<bool> delayOrder;
 
         // current count of things
         public int currentTrial = 0;
         public int currentRound = 0;
         public int currentMaxTrials;
-        private string currentOrbStr;
+        
+        // properties of the current trial
+        private bool currentTrialIsDelayed;
+        private int currentTrialPosition;
 
         // event stuff
-        public delegate void TrialStartedDelegate(string activeOrb);
+        public delegate void TrialStartedDelegate(int position, bool isDelayed);
         public event TrialStartedDelegate OnTrialStarted;
-        public delegate void TrialEndedDelegate(string activeOrb);
+        public delegate void TrialEndedDelegate(int position, bool isDelayed);
         public event TrialEndedDelegate OnTrialEnded;
         public delegate void RoundEndedDelegate();
         public event RoundEndedDelegate OnRoundEnded;
@@ -65,9 +67,7 @@ public class trialmanager : MonoBehaviour
         {
                 currentMaxTrials = maxTrials; // 60 trials per round
                 GenerateTrialOrder();
-                // isTrialRunning = false;
                 currentTrial = 0;
-                // currentRound++;
                 ResetTrialState();
                 targetManager.ShowMiddleOrb();
         }
@@ -76,26 +76,25 @@ public class trialmanager : MonoBehaviour
         {
                 isTrialRunning = false;
                 isRoundFinished = false;
-                // isWaitingPhase = false;
                 currentPhase = "waitingForTarget";
         }
 
         // creates a randomized trial order
         public void GenerateTrialOrder()
         {
-                // list with 30 left and 30 right orbs (not shuffled)
-                trialOrder = new List<string>();
+                // list with 30 delayed and 30 not-delayed trials (not shuffled)
+                delayOrder = new List<bool>();
                 for (int i = 0; i < currentMaxTrials / 2; i++)
                 {
-                        trialOrder.Add("left");
-                        trialOrder.Add("right");
+                        delayOrder.Add(true); // delayed
+                        delayOrder.Add(false); // not delayed
                 }
 
                 // shuffle trial order
-                for (int i = trialOrder.Count - 1; i > 0; i--)
+                for (int i = delayOrder.Count - 1; i > 0; i--)
                 {
                         int randomIndex = UnityEngine.Random.Range(0, i + 1);
-                        (trialOrder[randomIndex], trialOrder[i]) = (trialOrder[i], trialOrder[randomIndex]);
+                        (delayOrder[randomIndex], delayOrder[i]) = (delayOrder[i], delayOrder[randomIndex]);
                 }
         }
 
@@ -106,75 +105,61 @@ public class trialmanager : MonoBehaviour
                 if (currentTrial >= currentMaxTrials) return; // maximum trials in round reached
 
                 isTrialRunning = true;
-                // isWaitingPhase = false;
-                // isTrackingRunning = true;
-                // currentPhase = "activeTargeting";
 
-                currentOrbStr = trialOrder[currentTrial];
+                currentTrialIsDelayed = delayOrder[currentTrial];
+                currentTrialPosition = UnityEngine.Random.Range(0, 12); // 0-11 for 12 positions
+
                 currentTrial++;
 
-                OnTrialStarted?.Invoke(currentOrbStr); // start trial with next side target
+                OnTrialStarted?.Invoke(currentTrialPosition, currentTrialIsDelayed); // start trial with next target
                 
         }
 
-        // called in mainmanager after first in in running trial
+        // called in mainmanager after first hit in running trial
         // after disappearing of side target (see HideOrbWithDelay())
         public void StopTrial()
         {
                 isTrialRunning = false;
                 
                 // starts end-trial-event
-                OnTrialEnded?.Invoke(currentOrbStr);
+                OnTrialEnded?.Invoke(currentTrialPosition, currentTrialIsDelayed);
 
-                // isTrackingRunning = false;
                 currentPhase = "waitingForTarget";
-
-                // string activeOrb = trialOrder[currentTrial];
-
 
                 // check if round and/or game is finished
                 if (currentTrial >= currentMaxTrials)
                 {
                         isRoundFinished = true;
                         currentRound++;
-                        if (currentRound > maxRounds)
+                        if (currentRound >= maxRounds)
                         {
                                 OnGameEnded?.Invoke(); // game is finished
                         }
                         else
                         {
-                                // currentRound++;
                                 OnRoundEnded?.Invoke(); // round is finished
                         }
                 }
-
-
         }
 
-        // returns delay for the current orb
-        // comment and decomment for whatever version (extented or persistence) you need
-        public float GetDelay(string activeOrbStr)
+        // returns the delay time for the current trial
+        public float GetCurrentDelay()
         {
-                // persistence version
-                // if (currentRound > 8) return shortDelay; // short delay for all trials after 8 rounds
-                // else if (version == "lld" && activeOrbStr == "left") return longDelay;
-                // if (currentRound > 8) return shortDelay; // short delay for all trials after 8 rounds
+                return currentTrialIsDelayed ? longDelay : shortDelay;
+        }
 
-                // extended version
-                if (version == "lld" && activeOrbStr == "left") return longDelay;
-                else if (version == "rld" && activeOrbStr == "right") return longDelay;
-                return shortDelay; // short
+        public bool IsCurrentTrialDelayed()
+        {
+                return currentTrialIsDelayed;
+        }
+        
+        public int GetCurrentTrialPosition()
+        {
+                return currentTrialPosition;
         }
 
         public void UpdateTrackingPhase(string phase)
         {
                 currentPhase = phase;
-        }
-
-        // returns current string of side orb
-        public string GetCurrentOrbName()
-        {
-
-                return currentOrbStr;
         }
 }

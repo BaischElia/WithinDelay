@@ -53,9 +53,6 @@ public class mainmanager : MonoBehaviour
 
                 // setup for the game
                 System.Threading.Thread.CurrentThread.CurrentCulture = new System.Globalization.CultureInfo("en-US");
-                // QualitySettings.vSyncCount = 1; 
-                // Application.targetFrameRate = 60;
-
         }
 
         // called from the start screen after password check
@@ -64,7 +61,7 @@ public class mainmanager : MonoBehaviour
                 FPSController.SetActive(true);
                 Cursor.lockState = CursorLockMode.Locked;
                 canCastSpell = true;
-                trackingManager.SetInitData(dataManager.GetID(), trialManager.version);
+                // trackingManager.SetInitData(dataManager.GetID(), trialManager.version);
                 trialManager.StartPractice();
         }
 
@@ -73,8 +70,6 @@ public class mainmanager : MonoBehaviour
                 if (!FPSController.activeSelf) return; // no FPSController = start screen
 
                 mouseDelta = FPSController.GetComponentInChildren<FirstPersonLook>().updateFPSController(); // rotate camera
-
-                // trackingManager.updateMouseTracking(); // update mouse tracking
 
                 if (Input.GetMouseButtonDown(0) && !trialManager.isRoundFinished) // clicks only counts if no start or pause screen
                 {
@@ -87,14 +82,15 @@ public class mainmanager : MonoBehaviour
 
                                 if (hit.collider.CompareTag("orb"))
                                 {
-                                        if (!trialManager.isTrialRunning && hit.collider.name == "middleOrb") // middle target hit, trial starts
+                                        if (!trialManager.isTrialRunning && hit.collider.gameObject.name == "middleOrb") // middle target hit, trial starts
                                         {
                                                 // sets up the trial and calls start-event
                                                 trialManager.PrepareTrial();
                                                 eventTriggered = true;
                                                 trackingManager.updateMouseTracking(mouseDelta, trackingmanager.EventTrigger.middleTargetClick);
                                         }
-                                        else if (trialManager.isTrialRunning && (hit.collider.name == "rightOrb" || trialManager.isTrialRunning && hit.collider.name == "leftOrb")) // side target hit, trial stops
+                                        // A non-middle orb was hit during a running trial
+                                        else if (trialManager.isTrialRunning && hit.collider.gameObject.name != "middleOrb") 
                                         {
                                                 StopTrial(true); // hit success
                                         }
@@ -126,8 +122,8 @@ public class mainmanager : MonoBehaviour
                 endRT = Time.time;
                 currRT = endRT - startRT;
 
-                string activeOrb = trialManager.GetCurrentOrbName();
-                float delay = trialManager.GetDelay(activeOrb);
+                int position = trialManager.GetCurrentTrialPosition();
+                float delay = trialManager.GetCurrentDelay();
 
 
                 eventTriggered = true;
@@ -147,15 +143,13 @@ public class mainmanager : MonoBehaviour
                         trialManager.currentRound,
                         trialManager.currentTrial,
                         trackingManager.GetMousePosition().x,
-                        trackingManager.GetMousePosition().y, // TODO 
-                        activeOrb,
+                        trackingManager.GetMousePosition().y,
+                        position.ToString(), // Save the position (0-11) as a string
                         delay,
                         startRT,
                         endRT,
                         currRT,
                         hitSuccess ? 1 : 0);
-
-                // Debug.Log($"Hit: {hitSuccess}, RT: {currRT}, Delay: {delay}");
 
                 uiManager.UpdateInGameUI(true, currRT, trialManager.currentTrial, trialManager.currentMaxTrials);
 
@@ -184,22 +178,19 @@ public class mainmanager : MonoBehaviour
 
         }
 
-        // gets called with trialmanager.StartTrial()
+        // gets called with trialmanager.PrepareTrial() -> OnTrialStarted
         // happens when middle target is hit
-
-        void HandleTrialStart(string activeOrb)
+        void HandleTrialStart(int position, bool isDelayed)
         {
-                // NOTE: tracking test
                 canCastSpell = false;
                 trackingManager.isTrackingMouseData = true; // start mouse tracking
 
                 targetManager.HideAllOrbs();
                 soundManager.PlayHitSound();
-                StartCoroutine(PreTargetStimulusTime(activeOrb));
-                
+                StartCoroutine(PreTargetStimulusTime(position, isDelayed));
         }
 
-        public IEnumerator PreTargetStimulusTime(string activeOrb)
+        public IEnumerator PreTargetStimulusTime(int position, bool isDelayed)
         {
                 trialManager.isWaitingPhase = true;             
 
@@ -210,7 +201,7 @@ public class mainmanager : MonoBehaviour
 
                 canCastSpell = true;
 
-                targetManager.ShowTargetOrb(activeOrb);
+                targetManager.ShowCircularTarget(position, isDelayed);
                 trialManager.isWaitingPhase = false;
 
                 targetAppeared = true;
@@ -218,11 +209,10 @@ public class mainmanager : MonoBehaviour
         }
 
         // gets called with hiding of side target
-        private void HandleTrialEnd(string activeOrb)
+        private void HandleTrialEnd(int position, bool isDelayed)
         {
                 // here happens nothing right now
                 // maybe handle mouse tracking here
-
         }
 
         // called when last trial of each round is finished
@@ -250,7 +240,4 @@ public class mainmanager : MonoBehaviour
         {
                 canCastSpell = true;
         }
-
 }
-
-
